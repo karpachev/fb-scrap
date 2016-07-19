@@ -1,0 +1,20 @@
+{
+  "name": "fb-scrap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "extend": "^3.0.0",
+    "facebook-node-sdk": "^0.2.0",
+    "fb": "^1.1.1",
+    "gcloud": "^0.37.0",
+    "q": "^1.4.1",
+    "request": "^2.73.0",
+    "request-json": "^0.5.6"
+  }
+}
