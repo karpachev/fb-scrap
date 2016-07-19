@@ -26,6 +26,12 @@ var stats = {
   }
 };
 
+process.on('uncaughtException', function (exception) {
+  console.log(exception); // to see your exception details in the console
+  // if you are on production, maybe you can send the exception details to your
+  // email as well ?
+});
+
 // message,story,description,created_time,from,likes.summary(true).limit(0)
 // , comments.summary(true).order(reverse_chronological).limit(0) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name}, comments.summary(true).order(reverse_chronological).limit(100) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name} } }, shares
 
@@ -35,8 +41,6 @@ function parse_stream(params) {
     .then(
       function(result){
         // console.log(result.data.length);
-
-
         process_result(result, function(){
           // console.log(result, result.paging);
           if (result.paging && result.paging.next && result.paging.next.query_params) {
@@ -50,18 +54,91 @@ function parse_stream(params) {
 
       },
       function(err) {
+        console.log("!!!");
         console.log(err.body.error.message);
         console.log(stats);
       }
-    );
+    ).fail(function(err){
+      console.log("!!!!");
+      console.log(err.body.error.message);
+      console.log(stats);
+    });
 }
 
 function process_result(result, cb) {
+
+  var keys = [];
+  var records = [];
   for (var i=0;i<result.data.length;i++) {
     process_entry(result.data[i]);
+    var entry = result.data[i];
+    if (!entry.from || !entry.from.id) {
+      continue;
+    }
+    var key = datastore.key(['User', entry.from.id]);
+    keys.push( key );
+    records.push({
+      key: key,
+      data: {
+        influence: entry.interaction_counts.likes + 
+                    entry.interaction_counts.shares + 
+                    entry.interaction_counts.comments,
+        interaction_counts: entry.interaction_counts
+      }
+    });
   }
 
-  cb();
+  // console.log(keys);
+  // console.log(records);
+  // return;
+  
+  datastore.get(
+    keys,
+    function(err,results) {
+      if (err) console.err(err);
+
+      for (var i=0;i<records.length;i++) {
+        var record = records[i];
+
+        // see if there is a match from GET
+        for (var j=0;j<results.length;j++) {
+          var result = results[j];
+          if (record.key.name == results.key.name) {
+            record.data.influence += results.influence;
+            record.data.interaction_counts.likes += results.interaction_counts.likes;
+            record.data.interaction_counts.comments += results.interaction_counts.comments;
+            record.data.interaction_counts.shares += results.interaction_counts.shares;
+            break;
+          }
+        }
+      }
+
+      // make unique
+      for (var i=0;i<records.length;i++) {
+        for (var j=i+1;j<records.length;j++) {
+          if (records[i].key.name==records[j].key.name) {
+            records[i].data.influence += records[j].data.influence;
+            records[i].data.interaction_counts.likes += records[j].data.interaction_counts.likes;
+            records[i].data.interaction_counts.comments += records[j].data.interaction_counts.comments;
+            records[i].data.interaction_counts.shares += records[j].data.interaction_counts.shares;
+            records.splice(j,1);
+            j--;
+          }
+        }
+      }
+      // console.log(records);
+      // throw new Error("Hello");
+
+      datastore.upsert(
+        records,
+        function(err, apiResponse) {
+          console.log("All records updated", err, apiResponse);
+          cb();
+        }
+      )
+    }
+  );
+
 }
 
 
