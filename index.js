@@ -2,6 +2,46 @@ var fs = require("fs");
 var FB_factory = require('./facebook_api.js'),
     FB= FB_factory();
 
+var gcloud = require('gcloud');
+var datastore = gcloud.datastore({projectId: 'node-test-3',});
+
+
+// Save data to Datastore.
+var blogPostData = {
+  title: 'How to make the perfect homemade pasta',
+  author: 'Andrew Chilton',
+  isDraft: true
+};
+
+var blogPostKey = datastore.key(['BlogPost',5629499534213120]);
+
+datastore.get(blogPostKey, function(err,entity){
+  console.log(err,entity);
+});
+
+
+datastore.save({
+  key: blogPostKey,
+  data: blogPostData
+}, function(err) {
+  // `blogPostKey` has been updated with an ID so you can do more operations
+  // with it, such as an update.
+  console.log("saved", blogPostKey);
+  blogPostData.isDraft = false;
+
+  datastore.save({
+    key: blogPostKey,
+    data: blogPostData
+  }, function(err) {
+    console.log("updated");
+    if (!err) {
+      // The blog post is now published!
+    }
+  });
+});
+
+
+
 
 FB.setVersion("v2.6")
   .setAccessToken(fs.readFileSync("./ACCESS_TOKEN",{encoding:"utf8"}));
@@ -34,10 +74,7 @@ function parse_stream(params) {
       function(result){
         console.log(result.data.length);
         for (let i=0;i<result.data.length;i++) {
-          unify_entry(result.data[i]);
-          print_entry(result.data[i]);
-          stats.posts++;
-          stats.inc_interactions(result.data[i].interaction_counts);
+          process_entry(result.data[i]);
         }
         //console.log(result, result.paging);
         if (result.paging && result.paging.next && result.paging.next.query_params) {
@@ -54,10 +91,10 @@ function parse_stream(params) {
     );
 }
 
-parse_stream({
-  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
-  limit: 100
-});
+// parse_stream({
+//   fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+//   limit: 100
+// });
 
 
 /**
@@ -98,3 +135,12 @@ function print_entry(entry) {
           entry.interaction_counts.shares
   ));
 }
+
+
+function process_entry(entry) {
+  unify_entry(entry);
+  print_entry(entry);
+  stats.posts++;
+  stats.inc_interactions(entry.interaction_counts);  
+}
+
