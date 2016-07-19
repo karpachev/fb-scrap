@@ -6,43 +6,6 @@ var gcloud = require('gcloud');
 var datastore = gcloud.datastore({projectId: 'node-test-3',});
 
 
-// Save data to Datastore.
-var blogPostData = {
-  title: 'How to make the perfect homemade pasta',
-  author: 'Andrew Chilton',
-  isDraft: true
-};
-
-var blogPostKey = datastore.key(['BlogPost',5629499534213120]);
-
-datastore.get(blogPostKey, function(err,entity){
-  console.log(err,entity);
-});
-
-
-datastore.save({
-  key: blogPostKey,
-  data: blogPostData
-}, function(err) {
-  // `blogPostKey` has been updated with an ID so you can do more operations
-  // with it, such as an update.
-  console.log("saved", blogPostKey);
-  blogPostData.isDraft = false;
-
-  datastore.save({
-    key: blogPostKey,
-    data: blogPostData
-  }, function(err) {
-    console.log("updated");
-    if (!err) {
-      // The blog post is now published!
-    }
-  });
-});
-
-
-
-
 FB.setVersion("v2.6")
   .setAccessToken(fs.readFileSync("./ACCESS_TOKEN",{encoding:"utf8"}));
 
@@ -67,22 +30,24 @@ var stats = {
 // , comments.summary(true).order(reverse_chronological).limit(0) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name}, comments.summary(true).order(reverse_chronological).limit(100) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name} } }, shares
 
 function parse_stream(params) {
-  "use strict";
 
   FB.api("/me/feed", params)
     .then(
       function(result){
-        console.log(result.data.length);
-        for (let i=0;i<result.data.length;i++) {
-          process_entry(result.data[i]);
-        }
-        //console.log(result, result.paging);
-        if (result.paging && result.paging.next && result.paging.next.query_params) {
-          parse_stream(result.paging.next.query_params)
-        } else {
-          stats.timing.end = new Date;
-          console.log(stats);
-        }
+        // console.log(result.data.length);
+
+
+        process_result(result, function(){
+          // console.log(result, result.paging);
+          if (result.paging && result.paging.next && result.paging.next.query_params) {
+            parse_stream(result.paging.next.query_params)
+          } else {
+            stats.timing.end = new Date;
+            console.log(stats);
+          }          
+        })
+
+
       },
       function(err) {
         console.log(err.body.error.message);
@@ -91,10 +56,19 @@ function parse_stream(params) {
     );
 }
 
-// parse_stream({
-//   fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
-//   limit: 100
-// });
+function process_result(result, cb) {
+  for (var i=0;i<result.data.length;i++) {
+    process_entry(result.data[i]);
+  }
+
+  cb();
+}
+
+
+parse_stream({
+  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+  limit: 100
+});
 
 
 /**
