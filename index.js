@@ -10,6 +10,11 @@ FB.setVersion("v2.6")
   .setAccessToken(fs.readFileSync("./ACCESS_TOKEN",{encoding:"utf8"}));
 
 
+process.on('uncaughtException', function(exception) {
+    console.log('uncaughtException occurred: ' + exception.stack);
+});
+
+
 var stats = {
   posts : 0,
   likes : 0,
@@ -103,11 +108,12 @@ function process_result(result, cb) {
         // see if there is a match from GET
         for (var j=0;j<results.length;j++) {
           var result = results[j];
-          if (record.key.name == results.key.name) {
-            record.data.influence += results.influence;
-            record.data.interaction_counts.likes += results.interaction_counts.likes;
-            record.data.interaction_counts.comments += results.interaction_counts.comments;
-            record.data.interaction_counts.shares += results.interaction_counts.shares;
+          if (record.key.name == result.key.name) {
+            // console.log(record.data, result);
+            record.data.influence += result.influence;
+            record.data.interaction_counts.likes += result.data.interaction_counts.likes;
+            record.data.interaction_counts.comments += result.data.interaction_counts.comments;
+            record.data.interaction_counts.shares += result.data.interaction_counts.shares;
             break;
           }
         }
