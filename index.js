@@ -1,9 +1,13 @@
 var fs = require("fs");
 var FB_factory = require('./facebook_api.js'),
     FB= FB_factory();
+var util = require("util");
 
 var gcloud = require('gcloud');
-var datastore = gcloud.datastore({projectId: 'node-test-3',});
+var datastore = gcloud.datastore({
+  projectId: 'node-test-3'
+  // ,apiEndpoint: "localhost:8341"
+});
 
 
 FB.setVersion("v2.6")
@@ -42,31 +46,18 @@ process.on('uncaughtException', function (exception) {
 
 function parse_stream(params) {
 
-  FB.api("/me/feed", params)
-    .then(
-      function(result){
-        // console.log(result.data.length);
-        process_result(result, function(){
-          // console.log(result, result.paging);
-          if (result.paging && result.paging.next && result.paging.next.query_params) {
-            parse_stream(result.paging.next.query_params)
-          } else {
-            stats.timing.end = new Date;
-            console.log(stats);
-          }          
-        })
-
-
-      },
-      function(err) {
-        console.log("!!!");
-        console.log(err.body.error.message);
-        console.log(stats);
-      }
-    ).fail(function(err){
-      console.log("!!!!");
-      console.log(err.body.error.message);
-      console.log(stats);
+  FB.api("/me/feed", params,
+    function(err, result) {
+      // console.log(result.data.length);
+      process_result(result, function(){
+        // console.log(result, result.paging);
+        if (result.paging && result.paging.next && result.paging.next.query_params) {
+          parse_stream(result.paging.next.query_params)
+        } else {
+          stats.timing.end = new Date;
+          console.log(stats);
+        }          
+      });
     });
 }
 
@@ -76,6 +67,8 @@ function process_result(result, cb) {
   var records = [];
   for (var i=0;i<result.data.length;i++) {
     process_entry(result.data[i]);
+
+    // build the keys, records array
     var entry = result.data[i];
     if (!entry.from || !entry.from.id) {
       continue;
@@ -96,12 +89,36 @@ function process_result(result, cb) {
   // console.log(keys);
   // console.log(records);
   // return;
+  // make unique
+  for (var i=0;i<records.length;i++) {
+    for (var j=i+1;j<records.length;j++) {
+      if (records[i].key.name==records[j].key.name) {
+        records[i].data.influence += records[j].data.influence;
+        records[i].data.interaction_counts.likes += records[j].data.interaction_counts.likes;
+        records[i].data.interaction_counts.comments += records[j].data.interaction_counts.comments;
+        records[i].data.interaction_counts.shares += records[j].data.interaction_counts.shares;
+        records.splice(j,1);
+        keys.splice(j,1);
+        j--;
+      }
+    }
+  }
+  if (keys.length==0) {
+    cb();
+    return;
+  }
   
   datastore.get(
     keys,
     function(err,results) {
-      if (err) console.err(err);
+      if (err) {
+        console.err(err);
+        throw new Error(err);
+      }
 
+      // console.log("++++")
+      // console.log(records);
+      // console.log(results);
       for (var i=0;i<records.length;i++) {
         var record = records[i];
 
@@ -110,35 +127,29 @@ function process_result(result, cb) {
           var result = results[j];
           if (record.key.name == result.key.name) {
             // console.log(record.data, result);
-            record.data.influence += result.influence;
+            record.data.influence += result.data.influence;
             record.data.interaction_counts.likes += result.data.interaction_counts.likes;
             record.data.interaction_counts.comments += result.data.interaction_counts.comments;
             record.data.interaction_counts.shares += result.data.interaction_counts.shares;
+            if (record.data.interaction_counts.likes>1000) {
+              console.log("!!!!!!!!");
+              console.log( util.format(record.data));
+            }            
             break;
           }
         }
       }
 
-      // make unique
-      for (var i=0;i<records.length;i++) {
-        for (var j=i+1;j<records.length;j++) {
-          if (records[i].key.name==records[j].key.name) {
-            records[i].data.influence += records[j].data.influence;
-            records[i].data.interaction_counts.likes += records[j].data.interaction_counts.likes;
-            records[i].data.interaction_counts.comments += records[j].data.interaction_counts.comments;
-            records[i].data.interaction_counts.shares += records[j].data.interaction_counts.shares;
-            records.splice(j,1);
-            j--;
-          }
-        }
-      }
+      // console.log("...")
+      // console.log(records);
+
       // console.log(records);
       // throw new Error("Hello");
 
       datastore.upsert(
         records,
         function(err, apiResponse) {
-          console.log("All records updated", err, apiResponse);
+          console.log("All records updated", err);
           cb();
         }
       )
@@ -176,7 +187,6 @@ function unify_entry(entry) {
 }
 
 function print_entry(entry) {
-  var util = require("util");
   if (!entry) {
     console.log("Empty result !!");
     return;
@@ -184,9 +194,11 @@ function print_entry(entry) {
 
   // console.log(entry);
   console.log( util.format(
-          "%s, %s: L:%d C:%d S:%d",
+          "%s, %s(%s-%s): L:%d C:%d S:%d",
           entry.created_time,
           (entry.from && entry.from.name) ? entry.from.name : "Unknown",
+          (entry.from && entry.from.id) ? entry.from.id : "N/A",
+          entry.id,
           entry.interaction_counts.likes,
           entry.interaction_counts.comments,
           entry.interaction_counts.shares

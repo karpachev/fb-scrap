@@ -1,5 +1,3 @@
-'use strict';
-var Q = require("q");
 var request = require("request-json");
 var extend  = require("extend");
 const querystring = require('querystring');
@@ -37,27 +35,24 @@ FacebookApi.prototype.setVersion = function(api_version) {
 }
 
 
-FacebookApi.prototype.api = function(url,params) {
-	var deferred = Q.defer();
+FacebookApi.prototype.api = function(url,params,cb) {
 	// deferred.reject(err) 
 	// deferred.resolve(err) 
 	this._request_client.headers['Authorization'] = 'OAuth ' + this._options.access_token;
 	var API_URL = this.form_url(url,params);
 	console.log(API_URL);
-	this._request_client.get(API_URL, function(err, result, body){
+	this._request_client.get(API_URL, function(err, result, body) {
 		// console.log(result.statusCode, body);
 		if (err || result.statusCode!=200) {
 			deferred.reject({err: err,result: result, body: body});
+			cb(err,{result: result, body: body});
 		} else {
 			if (body.paging) {
 				parse_paging(body)
 			}
-			deferred.resolve(body)
+			cb(null,body);
 		}
-		return;
-	})
-
-	return deferred.promise;
+	});
 }
 
 FacebookApi.prototype.form_url = function(url,params) {

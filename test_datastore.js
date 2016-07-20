@@ -1,16 +1,18 @@
 var fs = require("fs");
 var FB_factory = require('./facebook_api.js'),
     FB= FB_factory();
+var util = require("util");
 
 var gcloud = require('gcloud');
 var datastore = gcloud.datastore({
 	projectId: 'node-test-3',
-	 apiEndpoint: "localhost:8080"
+	 apiEndpoint: "localhost:8341"
 });
 
 
 
-var key1 = datastore.key(['Company', 1]);
+
+var key1 = datastore.key(['User', "10152920030679442"]);
 var key2 = datastore.key(['Company', 2]);
 
 /**
@@ -20,11 +22,21 @@ var key2 = datastore.key(['Company', 2]);
     data: { name: 'Vasil' } } ]
 */
 datastore.get(
-	[key1,key2],
+	key1,
 	function(err,results) {
-		console.log(err,results);
+		console.log(err);
+    console.log(util.inspect(results,5));
 	}
 )
+
+var query = datastore.createQuery('User');
+query.order("influence", {descending:true});
+query.limit(20);
+
+datastore.runQuery(query, function(err, entities) {
+    console.log( util.inspect(entities,{depth:7}) );
+});
+
 
 // datastore.save(
 // 	{
