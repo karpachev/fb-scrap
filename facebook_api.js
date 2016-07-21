@@ -1,7 +1,7 @@
-var request = require("request-json");
-var extend  = require("extend");
-const querystring = require('querystring');
-const URL = require('url');
+var request 		= require("request-json");
+var extend  		= require("extend");
+const querystring 	= require('querystring');
+const URL 			= require('url');
 
 function FacebookApiFactory(options) {
 	var merged_options = {};
@@ -10,7 +10,7 @@ function FacebookApiFactory(options) {
 		merged_options,
 		{
 			 api_root: "https://graph.facebook.com/",
-			 api_version: "v2.6"
+			 api_version: "v2.7"
 		},
 		options
 	);
@@ -39,8 +39,9 @@ FacebookApi.prototype.api = function(url,params,cb) {
 	// deferred.reject(err) 
 	// deferred.resolve(err) 
 	this._request_client.headers['Authorization'] = 'OAuth ' + this._options.access_token;
-	var API_URL = this.form_url(url,params);
+	var API_URL = this.formURL(url,params);
 	console.log(API_URL);
+	var self = this;
 	this._request_client.get(API_URL, function(err, result, body) {
 		// console.log(result.statusCode, body);
 		if (err || result.statusCode!=200) {
@@ -48,14 +49,14 @@ FacebookApi.prototype.api = function(url,params,cb) {
 			cb(err,{result: result, body: body});
 		} else {
 			if (body.paging) {
-				parse_paging(body)
+				self.parsePaging(body)
 			}
 			cb(null,body);
 		}
 	});
 }
 
-FacebookApi.prototype.form_url = function(url,params) {
+FacebookApi.prototype.formURL = function(url,params) {
 	var URL= this._options.api_version;
 	if (url.substring(0,1)!="/") {
 		URL+= "/";
@@ -70,7 +71,7 @@ FacebookApi.prototype.form_url = function(url,params) {
 	return URL;
 }
 
-function parse_paging(body) {
+FacebookApi.prototype.parsePaging = function(body) {
 	body.paging = {
 		previous: {
 			url: body.paging.previous,
