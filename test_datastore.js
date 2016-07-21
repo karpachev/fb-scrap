@@ -30,11 +30,22 @@ datastore.get(
 )
 
 var query = datastore.createQuery('User');
+query.filter("influence", "NaN");
 query.order("influence", {descending:true});
 query.limit(20);
 
 datastore.runQuery(query, function(err, entities) {
-    console.log( util.inspect(entities,{depth:7}) );
+	entities.forEach(function(e){
+		console.log(util.format(
+				"%s: %s L:%d C:%d S:%d",
+				e.key.name,
+				e.data.influence,
+				e.data.interaction_counts.likes,
+				e.data.interaction_counts.comments,
+				e.data.interaction_counts.shares
+			));
+	})
+    // console.log( util.inspect(entities,{depth:7}) );
 });
 
 
