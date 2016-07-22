@@ -36,8 +36,6 @@ FacebookApi.prototype.setVersion = function(api_version) {
 
 
 FacebookApi.prototype.api = function(url,params,cb) {
-	// deferred.reject(err) 
-	// deferred.resolve(err) 
 	this._request_client.headers['Authorization'] = 'OAuth ' + this._options.access_token;
 	var API_URL = this.formURL(url,params);
 	console.log(API_URL);
@@ -45,7 +43,6 @@ FacebookApi.prototype.api = function(url,params,cb) {
 	this._request_client.get(API_URL, function(err, result, body) {
 		// console.log(result.statusCode, body);
 		if (err || result.statusCode!=200) {
-			deferred.reject({err: err,result: result, body: body});
 			cb(err,{result: result, body: body});
 		} else {
 			if (body.paging) {
@@ -72,20 +69,27 @@ FacebookApi.prototype.formURL = function(url,params) {
 }
 
 FacebookApi.prototype.parsePaging = function(body) {
-	body.paging = {
-		previous: {
+	console.log(body.paging.previous);
+
+	body.paging = {};
+
+	if(body.paging && body.paging.previous) {
+		body.paging.previous = {
 			url: body.paging.previous,
 			query_params: 		querystring.parse(
 													URL.parse(body.paging.previous).query
 												)	
-		},
-		next: {
+		};
+	}
+
+	if(body.paging && body.paging.next) {
+		body.paging.next = {
 			url: body.paging.next,
 			query_params: 		querystring.parse(
 													URL.parse(body.paging.next).query
 												)	
 		}
-	};
+	}
 }
 
 

@@ -1,8 +1,27 @@
+"use strict";
 var fs 			= require("fs");
 var FB_factory 	= require('./facebook_api.js'),
     FB 			= FB_factory();
 var util 		= require("util");
 var extend  	= require("extend");
+var EventEmitter = require('events');
+
+
+var stats = {
+  posts : 0,
+  likes : 0,
+  comments : 0,
+  shares : 0,
+  timing : {
+    start: new Date(),
+    end: null
+  },
+  inc_interactions : function(interaction_counts) {
+    this.likes += interaction_counts.likes;
+    this.comments += interaction_counts.comments;
+    this.shares += interaction_counts.shares;
+  }
+};
 
 
 function PageScraperFactory(options) {
@@ -21,23 +40,28 @@ function PageScraperFactory(options) {
 	return new PageScraper(merged_options);
 }
 
-function PageScraper(options) {
-	if (!options.access_token) {
-		throw new TypeError("Access token must be provided");
-	}
-	this._options = options;
-	//TODO check if the access token is valid
+class PageScraper extends EventEmitter {
 
-	FB.setVersion(this._options.api_version)
-	  .setAccessToken(this._options.access_token);
-
-	this.parseStream(
-		util.format("/%s/feed", this._options.page_id),
-		{
-		  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
-		  limit: 100
+	constructor (options) {
+		if (!options.access_token) {
+			throw new TypeError("Access token must be provided");
 		}
-	);
+		this._options = options;
+		//TODO check if the access token is valid
+
+		FB.setVersion(this._options.api_version)
+		  .setAccessToken(this._options.access_token);
+
+		this.parseStream(
+			util.format("/%s/feed", this._options.page_id),
+			{
+			  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+			  limit: 100
+			}
+		);
+	}
+
+
 }
 
 
@@ -54,7 +78,7 @@ PageScraper.prototype.parseStream = function(base_graph, params) {
       // console.log(result.data.length);
       self.processResult(result, function() {
         // console.log(result, result.paging);
-        if (result.paging && result.paging.next && result.paging.next.query_params) {
+        if (result && result.paging && result.paging.next && result.paging.next.query_params) {
           self.parseStream(base_graph, result.paging.next.query_params)
         } else {
           stats.timing.end = new Date;
@@ -66,6 +90,10 @@ PageScraper.prototype.parseStream = function(base_graph, params) {
 
 
 PageScraper.prototype.processResult = function(result, cb) {
+  if (!result || !result.data) {
+  	cb();
+  	return;
+  }
   for (var i=0;i<result.data.length;i++) {
     var e = result.data[i];
     unify_entry(e);
