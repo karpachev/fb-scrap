@@ -46,7 +46,7 @@ class PageScraper extends EventEmitter {
 		if (!options.access_token) {
 			throw new TypeError("Access token must be provided");
 		}
-		this._options = options;
+ 		this._options = options;
 		//TODO check if the access token is valid
 
 		FB.setVersion(this._options.api_version)

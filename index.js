@@ -35,12 +35,6 @@ var stats = {
   }
 };
 
-process.on('uncaughtException', function (exception) {
-  console.log(exception); // to see your exception details in the console
-  // if you are on production, maybe you can send the exception details to your
-  // email as well ?
-});
-
 // message,story,description,created_time,from,likes.summary(true).limit(0)
 // , comments.summary(true).order(reverse_chronological).limit(0) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name}, comments.summary(true).order(reverse_chronological).limit(100) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name} } }, shares
 
@@ -60,6 +54,15 @@ function parse_stream(params) {
       });
     });
 }
+
+
+parse_stream({
+  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+  limit: 100
+});
+
+
+
 
 function process_result(result, cb) {
 
@@ -158,11 +161,6 @@ function process_result(result, cb) {
 
 }
 
-
-parse_stream({
-  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
-  limit: 100
-});
 
 
 /**
