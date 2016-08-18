@@ -37,12 +37,15 @@ function PageScraperFactory(options) {
 		options
 	);
 
+	console.log(merged_options);
 	return new PageScraper(merged_options);
 }
 
 class PageScraper extends EventEmitter {
 
 	constructor (options) {
+		super();
+		console.log("Now in the Event Emitter", this);
 		if (!options.access_token) {
 			throw new TypeError("Access token must be provided");
 		}
@@ -60,8 +63,6 @@ class PageScraper extends EventEmitter {
 			}
 		);
 	}
-
-
 }
 
 

@@ -3,7 +3,7 @@ var FB_factory = require('./facebook_api.js'),
     FB= FB_factory();
 var util = require("util");
 
-var gcloud = require('gcloud');
+var gcloud = require('google-cloud');
 var datastore = gcloud.datastore({
   projectId: 'node-test-3'
   // ,apiEndpoint: "localhost:8341"
