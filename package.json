@@ -1,13 +1,17 @@
 {
   "name": "fb-scrap",
   "version": "1.0.0",
-  "description": "",
+  "description": "Algorithm to scrap a FB page",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Vasil Karpachev",
   "license": "ISC",
+  "repository" : { 
+    "type" : "git",
+    "url" : "https://github.com/karpachev/fb-scrap.git"
+  },
   "dependencies": {
     "extend": "^3.0.0",
     "facebook-node-sdk": "^0.2.0",

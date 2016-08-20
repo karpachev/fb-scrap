@@ -82,6 +82,9 @@ PageScraper.prototype.parseStream = function(base_graph, params) {
         if (result && result.paging && result.paging.next && result.paging.next.query_params) {
           self.parseStream(base_graph, result.paging.next.query_params)
         } else {
+          if (result.body && result.body.error) {
+            console.error("Failed to process request", result.body.error);
+          }
           stats.timing.end = new Date;
           console.log(stats);
         }          
@@ -92,6 +95,7 @@ PageScraper.prototype.parseStream = function(base_graph, params) {
 
 PageScraper.prototype.processResult = function(result, cb) {
   if (!result || !result.data) {
+    console.error("There is no more data to process");
   	cb();
   	return;
   }
