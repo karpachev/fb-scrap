@@ -2,6 +2,8 @@ var request 		= require("request-json");
 var extend  		= require("extend");
 const querystring 	= require('querystring');
 const URL 			= require('url');
+var LOG          	= require("./log.js")
+
 
 function FacebookApiFactory(options) {
 	var merged_options = {};
@@ -38,10 +40,10 @@ FacebookApi.prototype.setVersion = function(api_version) {
 FacebookApi.prototype.api = function(url,params,cb) {
 	this._request_client.headers['Authorization'] = 'OAuth ' + this._options.access_token;
 	var API_URL = this.formURL(url,params);
-	console.log(API_URL);
+	LOG(LOG.FB_API, API_URL);
 	var self = this;
 	this._request_client.get(API_URL, function(err, result, body) {
-		// console.log(result.statusCode, body);
+		// LOG(LOG.FB_API, result.statusCode, body);
 		if (err || result.statusCode!=200) {
 			cb(err,{result: result, body: body});
 		} else {
@@ -69,9 +71,7 @@ FacebookApi.prototype.formURL = function(url,params) {
 }
 
 FacebookApi.prototype.parsePaging = function(body) {
-	console.log(body.paging.previous);
-
-	body.paging = {};
+	// LOG(LOG.FB_API, body.paging);
 
 	if(body.paging && body.paging.previous) {
 		body.paging.previous = {

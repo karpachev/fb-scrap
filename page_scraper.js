@@ -41,30 +41,31 @@ function PageScraperFactory(options) {
 	return new PageScraper(merged_options);
 }
 
-class PageScraper extends EventEmitter {
-
-	constructor (options) {
-		super();
-		console.log("Now in the Event Emitter", this);
-		if (!options.access_token) {
-			throw new TypeError("Access token must be provided");
-		}
- 		this._options = options;
-		//TODO check if the access token is valid
-
-		FB.setVersion(this._options.api_version)
-		  .setAccessToken(this._options.access_token);
-
-		this.parseStream(
-			util.format("/%s/feed", this._options.page_id),
-			{
-			  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
-			  limit: 100
-			}
-		);
+function PageScraper (options) {
+	EventEmitter.call(this);
+	console.log("Now in the Event Emitter");
+	if (!options.access_token) {
+		throw new TypeError("Access token must be provided");
 	}
-}
+	this._options = options;
+	//TODO check if the access token is valid
 
+	FB.setVersion(this._options.api_version)
+	  .setAccessToken(this._options.access_token);
+
+	this.parseStream(
+		util.format("/%s/feed", this._options.page_id),
+		{
+		  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+		  limit: 100
+		},
+    function (stats) {
+      console.log(stats);
+    }
+	);
+}
+PageScraper.prototype = Object.create(EventEmitter.prototype);
+PageScraper.prototype.constructor = PageScraper;
 
 
 
@@ -72,21 +73,24 @@ class PageScraper extends EventEmitter {
 // message,story,description,created_time,from,likes.summary(true).limit(0)
 // , comments.summary(true).order(reverse_chronological).limit(0) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name}, comments.summary(true).order(reverse_chronological).limit(100) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name} } }, shares
 
-PageScraper.prototype.parseStream = function(base_graph, params) {
+PageScraper.prototype.parseStream = function(base_graph, params, cb) {
   var self = this;
   FB.api(base_graph, params,
     function(err, result) {
       // console.log(result.data.length);
       self.processResult(result, function() {
-        // console.log(result, result.paging);
+        // console.log(result.paging);
         if (result && result.paging && result.paging.next && result.paging.next.query_params) {
-          self.parseStream(base_graph, result.paging.next.query_params)
+          self.parseStream(base_graph, result.paging.next.query_params, cb)
         } else {
           if (result.body && result.body.error) {
             console.error("Failed to process request", result.body.error);
           }
-          stats.timing.end = new Date;
-          console.log(stats);
+
+          if (cb) {
+            stats.timing.end = new Date;
+            cb(stats);
+          }
         }          
       });
     });
@@ -106,10 +110,10 @@ PageScraper.prototype.processResult = function(result, cb) {
     if (e.interaction_counts.comments) {
     	this.parseStream(
     		util.format("/%s/comments", e.id),
-			{
-			  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
-			  limit: 100
-			}
+  			{
+  			  fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+  			  limit: 100
+  			}
     	);
     }
     // console.log(e);
