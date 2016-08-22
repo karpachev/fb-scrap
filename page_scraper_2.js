@@ -1,7 +1,6 @@
 "use strict";
 var fs 			     = require("fs");
-var FB_factory 	 = require('./facebook_api.js'),
-    FB 			     = FB_factory();
+var FB_factory 	 = require('./facebook_api.js');
 var util 		     = require("util");
 var extend  	   = require("extend");
 var EventEmitter = require('events');
@@ -10,12 +9,15 @@ var LOG          = require("./log.js")
 
 
 
-
+/**
+  * Global static object to track stats about scraping
+  */ 
 var stats = {
   posts : 0,
   likes : 0,
   comments : 0,
   shares : 0,
+  api_calls : 0,
   timing : {
     start: new Date(),
     end: null
@@ -38,7 +40,10 @@ function PageScraperFactory(options) {
 		{
 			 access_token: "",
 			 page_id: "me",
-			 api_version: "v2.7"
+			 api_version: "v2.7",
+       concurency: {
+          api_calls : 20
+       }
 		},
 		options
 	);
@@ -47,6 +52,7 @@ function PageScraperFactory(options) {
 	return new PageScraper(merged_options);
 }
 
+/// Constructor of the main scraper class
 function PageScraper (options) {
   EventEmitter.call(this);
 	LOG(LOG.PAGE_SCRAPER, "Now in the Event Emitter");
@@ -56,9 +62,13 @@ function PageScraper (options) {
 	this._options = options;
 	//TODO check if the access token is valid
 
-	FB.setVersion(this._options.api_version)
+  // Initialize the Facebook API object
+  this.FB = FB_factory();
+	this.FB.setVersion(this._options.api_version)
 	  .setAccessToken(this._options.access_token);
 
+  // Create a queue that will manage how many 
+  // requests are send to Facebook 
   var self = this;
   this._schedule_queue = async.queue(
     function(task,cb) {
@@ -69,9 +79,10 @@ function PageScraper (options) {
         cb
       );
     },
-    10
+    self._options.concurency.api_calls
   );
 
+  // Start the gathering in the page root
   this.scheduleStream(
       util.format("/%s/feed", this._options.page_id),
       {
@@ -80,6 +91,7 @@ function PageScraper (options) {
       }
     );
 
+  // When finished with the gathering - execute this function
   this._schedule_queue.drain = function() {
     LOG(LOG.PAGE_SCRAPER, "Queue drained");
     stats.timing.end = new Date();
@@ -87,9 +99,11 @@ function PageScraper (options) {
     self.emit("end", stats);
   }
 }
+// inherit from EventEmitter
 PageScraper.prototype = Object.create(EventEmitter.prototype);
 PageScraper.prototype.constructor = PageScraper;
 
+/// Schedule and API call to gather posts, comments and likes.
 PageScraper.prototype.scheduleStream = function(base_graph, params) {
   this._schedule_queue.push(
       {
@@ -102,37 +116,68 @@ PageScraper.prototype.scheduleStream = function(base_graph, params) {
 }
 
 
-// message,story,description,created_time,from,likes.summary(true).limit(0)
-// , comments.summary(true).order(reverse_chronological).limit(0) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name}, comments.summary(true).order(reverse_chronological).limit(100) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name} } }, shares
-
+/// Make an FB api call to get the  posts, comments or likes.
+/// Upon arrival of the result - process it
 PageScraper.prototype.parseStream = function(base_graph, params, cb) {
   var self = this;
-  FB.api(
+  // one more API call
+  stats.api_calls++;
+
+  this.FB.api(
     base_graph, 
     params,
     function(err, result) {
-      // LOG(LOG.PAGE_SCRAPER, result.data.length);
+      //TODO - Apropriate error handling
+      if (err) {
+        if (!params.system) {
+          Object.defineProperty(like_params, "system", 
+            {
+              enumerable: false,
+              configurable: true,
+              writable: true,
+              value: {
+                api_retries : 0
+              }
+            }
+          );
+        }
+
+        if (params.system.api_retries++<3) {
+          // one more retry
+          LOG({module:LOG.PAGE_SCRAPER, level:LOG.ERROR}, "Retrying the request one more time");
+          this.scheduleStream(base_graph, next_params);
+        }
+        cb(err);
+        return;
+      }
+
+      // normal processing
       var err = self.processResult(result, base_graph, params);
       cb(err);
     }
   );
 }
 
-
+/// Reformat the stream of posts, comments or likes and emit them (so
+/// Anyone interected could get them). Spawn aditional FB API calls
+/// if paging or comments or likes needs to be gathered
 PageScraper.prototype.processResult = function(result, base_graph, params) {
   if (!result || !result.data) {
     console.error("There is no more data to process");
   	return "There is no more data to process";
   }
-  // if there is more in the paging - shcedule them
+  // if there is more results in the paging - shcedule them
   if (result && result.paging && result.paging.next && result.paging.next.query_params) {
     var next_params = Object.assign({}, result.paging.next.query_params);
     if (params.system) next_params.system = params.system;
+
+    // schedule the next page
     this.scheduleStream(base_graph, next_params)
   }
 
   // process the result
   for (var i=0;i<result.data.length;i++) {
+    // make posts,comments and likes look nearly the same
     var e = result.data[i];
     this.unify_entry(e,params);
     LOG(LOG.PAGE_SCRAPER, params.system, e.created_time, e.id, e.interaction_counts);
@@ -146,7 +191,7 @@ PageScraper.prototype.processResult = function(result, base_graph, params) {
 
     if (e.interaction_counts.comments) {
       var comment_params = {
-          fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares",
+          fields: "message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0)",
           limit: 100
       };
       Object.defineProperty(comment_params, "system", 
@@ -178,6 +223,7 @@ PageScraper.prototype.processResult = function(result, base_graph, params) {
           writable: true,
           value: {
             parent : e.id,
+            parent_create_time : e.created_time,
             item_type : "like"
           }
         }
@@ -191,6 +237,7 @@ PageScraper.prototype.processResult = function(result, base_graph, params) {
 }
 
 /**
+a post object from FB looks like:
 { message: 'sorry for the last time :)',
   created_time: '2016-06-27T12:10:29+0000',
   from: { name: 'Петя Радева', id: '10206083421555746' },
@@ -201,9 +248,29 @@ PageScraper.prototype.processResult = function(result, base_graph, params) {
      summary: { total_count: 0, can_like: true, has_liked: false } },
   comments:
    { data: [],
-     summary: { order: 'chronological', total_count: 0, can_comment: true } } }
+     summary: { order: 'chronological', total_count: 0, can_comment: true } } 
+}
+
+ALl items should have the following fields:
+    {
+      id : "...",
+      parent_id : "...", // only for comments and likes
+      item_type : "..", // post, comment or like
+      create_time : "..",  
+      from : {
+        id : "...",
+        name : "..."
+      },
+      interaction_counts : {
+        "likes" : ...,
+        "comments" : ...,
+        "shares" : ...
+      }
+    }
 */
 PageScraper.prototype.unify_entry = function(entry,params) {
+
+  // add the item_type
   if (!params.system) {
     entry.item_type = "post";
   } else {
@@ -215,17 +282,20 @@ PageScraper.prototype.unify_entry = function(entry,params) {
     comments : (entry.comments && entry.comments.summary && entry.comments.summary.total_count) ? entry.comments.summary.total_count : 0,
     shares : (entry.shares && entry.shares.count) ? entry.shares.count : 0
   }
+
+  delete entry.likes;
+  delete entry.comments;
+  delete entry.shares;
 }
 
 PageScraper.prototype.emit_item = function(item,params) {
   item = Object.assign({}, item);
 
-  delete item.likes;
-  delete item.comments;
-  delete item.shares;
-
   if (params.system) {
     item.parent_id = params.system.parent;
+    if (!item.created_time) {
+      item.created_time = params.system.parent_create_time;
+    }
   }
 
   if (item.item_type=="like") {
@@ -235,7 +305,6 @@ PageScraper.prototype.emit_item = function(item,params) {
       id: item.id,
       name: item.name
     }
-    delete item.id;
     delete item.name;
   }
 

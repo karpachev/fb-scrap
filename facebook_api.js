@@ -45,6 +45,7 @@ FacebookApi.prototype.api = function(url,params,cb) {
 	this._request_client.get(API_URL, function(err, result, body) {
 		// LOG(LOG.FB_API, result.statusCode, body);
 		if (err || result.statusCode!=200) {
+			LOG({module:LOG.FB_API, level:LOG.ERROR}, err, JSON.stringify(result));
 			cb(err,{result: result, body: body});
 		} else {
 			if (body.paging) {
