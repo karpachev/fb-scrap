@@ -1,23 +1,16 @@
-const cluster = require('cluster');
-const http = require('http');
-const numCPUs = require('os').cpus().length;
+var express = require('express'),
+    cluster = require('cluster'),
+    os = require('os');
 
-console.dir(numCPUs);
 
-if (cluster.isMaster) {
-  // Fork workers.
-  for (var i = 0; i < numCPUs; i++) {
-    cluster.fork();
-  }
+// This is a worker, because cluster.isMaster is false,
+// and so the conditional above will never run.
+// Let's just initialize Express and create a basic route.
+var app = express();
+app.listen(8000);
+console.log("Now in Worker")
 
-  cluster.on('exit', (worker, code, signal) => {
-    console.log(`worker ${worker.process.pid} died`);
-  });
-} else {
-  // Workers can share any TCP connection
-  // In this case it is an HTTP server
-  http.createServer((req, res) => {
-    res.writeHead(200);
-    res.end('hello world\n');
-  }).listen(8000);
-}
+app.get('/', function (req, res) {
+	res.send('Running on worker with id #');
+	// console.log('Running on worker with id #' + cluster.worker.id);
+});
