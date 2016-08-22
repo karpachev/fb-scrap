@@ -8,10 +8,6 @@
   },
   "author": "Vasil Karpachev",
   "license": "ISC",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/karpachev/fb-scrap.git"
-  },
   "dependencies": {
     "async": "^2.0.1",
     "extend": "^3.0.0",
