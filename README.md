@@ -1,1 +1,4 @@
-Scrap a Facebook page
+Scrap a Facebook page.
+
+TODO:
+- add test
