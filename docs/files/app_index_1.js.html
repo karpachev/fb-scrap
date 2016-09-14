@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>app\index_1.js - fb-scrap</title>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/3.9.1/build/cssgrids/cssgrids-min.css">
+    <link rel="stylesheet" href="../assets/vendor/prettify/prettify-min.css">
+    <link rel="stylesheet" href="../assets/css/main.css" id="site_styles">
+    <link rel="icon" href="../assets/favicon.ico">
+    <script src="http://yui.yahooapis.com/combo?3.9.1/build/yui/yui-min.js"></script>
+</head>
+<body class="yui3-skin-sam">
+
+<div id="doc">
+    <div id="hd" class="yui3-g header">
+        <div class="yui3-u-3-4">
+                <h1><img src="../assets/css/logo.png" title="fb-scrap" width="117" height="52"></h1>
+        </div>
+        <div class="yui3-u-1-4 version">
+            <em>API Docs for: 1.0.0</em>
+        </div>
+    </div>
+    <div id="bd" class="yui3-g">
+
+        <div class="yui3-u-1-4">
+            <div id="docs-sidebar" class="sidebar apidocs">
+                <div id="api-list">
+                    <h2 class="off-left">APIs</h2>
+                    <div id="api-tabview" class="tabview">
+                        <ul class="tabs">
+                            <li><a href="#api-classes">Classes</a></li>
+                            <li><a href="#api-modules">Modules</a></li>
+                        </ul>
+                
+                        <div id="api-tabview-filter">
+                            <input type="search" id="api-filter" placeholder="Type to filter APIs">
+                        </div>
+                
+                        <div id="api-tabview-panel">
+                            <ul id="api-classes" class="apis classes">
+                                <li><a href="../classes/FacebookApi.html">FacebookApi</a></li>
+                                <li><a href="../classes/FacebookApiFactory.html">FacebookApiFactory</a></li>
+                            </ul>
+                
+                
+                            <ul id="api-modules" class="apis modules">
+                                <li><a href="../modules/Facebook API.html">Facebook API</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="yui3-u-3-4">
+                <div id="api-options">
+                    Show:
+                    <label for="api-show-inherited">
+                        <input type="checkbox" id="api-show-inherited" checked>
+                        Inherited
+                    </label>
+            
+                    <label for="api-show-protected">
+                        <input type="checkbox" id="api-show-protected">
+                        Protected
+                    </label>
+            
+                    <label for="api-show-private">
+                        <input type="checkbox" id="api-show-private">
+                        Private
+                    </label>
+                    <label for="api-show-deprecated">
+                        <input type="checkbox" id="api-show-deprecated">
+                        Deprecated
+                    </label>
+            
+                </div>
+            
+            <div class="apidocs">
+                <div id="docs-main">
+                    <div class="content">
+<h1 class="file-heading">File: app\index_1.js</h1>
+
+<div class="file">
+    <pre class="code prettyprint linenums">
+var fs = require(&quot;fs&quot;);
+var FB_factory = require(&#x27;./facebook_api.js&#x27;),
+    FB= FB_factory();
+var util = require(&quot;util&quot;);
+
+var gcloud = require(&#x27;google-cloud&#x27;);
+var datastore = gcloud.datastore({
+  projectId: &#x27;node-test-3&#x27;
+  // ,apiEndpoint: &quot;localhost:8341&quot;
+});
+
+
+FB.setVersion(&quot;v2.6&quot;)
+  .setAccessToken(fs.readFileSync(&quot;./ACCESS_TOKEN&quot;,{encoding:&quot;utf8&quot;}));
+
+
+process.on(&#x27;uncaughtException&#x27;, function(exception) {
+    console.log(&#x27;uncaughtException occurred: &#x27; + exception.stack);
+});
+
+
+var stats = {
+  posts : 0,
+  likes : 0,
+  comments : 0,
+  shares : 0,
+  timing : {
+    start: new Date(),
+    end: null
+  },
+  inc_interactions : function(interaction_counts) {
+    this.likes += interaction_counts.likes;
+    this.comments += interaction_counts.comments;
+    this.shares += interaction_counts.shares;
+  }
+};
+
+// message,story,description,created_time,from,likes.summary(true).limit(0)
+// , comments.summary(true).order(reverse_chronological).limit(0) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name}, comments.summary(true).order(reverse_chronological).limit(100) { from,message, likes.summary(true).limit(100) .filter(stream).order(reverse_chronological){name} } }, shares
+
+function parse_stream(params) {
+
+  FB.api(&quot;/me/feed&quot;, params,
+    function(err, result) {
+      // console.log(result.data.length);
+      process_result(result, function(){
+        // console.log(result, result.paging);
+        if (result.paging &amp;&amp; result.paging.next &amp;&amp; result.paging.next.query_params) {
+          parse_stream(result.paging.next.query_params)
+        } else {
+          stats.timing.end = new Date;
+          console.log(stats);
+        }          
+      });
+    });
+}
+
+
+parse_stream({
+  fields: &quot;message,story,description,created_time,from,likes.summary(true).limit(0),comments.summary(true).limit(0),shares&quot;,
+  limit: 100
+});
+
+
+
+
+function process_result(result, cb) {
+
+  var keys = [];
+  var records = [];
+  for (var i=0;i&lt;result.data.length;i++) {
+    process_entry(result.data[i]);
+
+    // build the keys, records array
+    var entry = result.data[i];
+    if (!entry.from || !entry.from.id) {
+      continue;
+    }
+    var key = datastore.key([&#x27;User&#x27;, entry.from.id]);
+    keys.push( key );
+    records.push({
+      key: key,
+      data: {
+        influence: entry.interaction_counts.likes + 
+                    entry.interaction_counts.shares + 
+                    entry.interaction_counts.comments,
+        interaction_counts: entry.interaction_counts
+      }
+    });
+  }
+
+  // console.log(keys);
+  // console.log(records);
+  // return;
+  // make unique
+  for (var i=0;i&lt;records.length;i++) {
+    for (var j=i+1;j&lt;records.length;j++) {
+      if (records[i].key.name==records[j].key.name) {
+        records[i].data.influence += records[j].data.influence;
+        records[i].data.interaction_counts.likes += records[j].data.interaction_counts.likes;
+        records[i].data.interaction_counts.comments += records[j].data.interaction_counts.comments;
+        records[i].data.interaction_counts.shares += records[j].data.interaction_counts.shares;
+        records.splice(j,1);
+        keys.splice(j,1);
+        j--;
+      }
+    }
+  }
+  if (keys.length==0) {
+    cb();
+    return;
+  }
+  
+  datastore.get(
+    keys,
+    function(err,results) {
+      if (err) {
+        console.err(err);
+        throw new Error(err);
+      }
+
+      // console.log(&quot;++++&quot;)
+      // console.log(records);
+      // console.log(results);
+      for (var i=0;i&lt;records.length;i++) {
+        var record = records[i];
+
+        // see if there is a match from GET
+        for (var j=0;j&lt;results.length;j++) {
+          var result = results[j];
+          if (record.key.name == result.key.name) {
+            // console.log(record.data, result);
+            record.data.influence += result.data.influence;
+            record.data.interaction_counts.likes += result.data.interaction_counts.likes;
+            record.data.interaction_counts.comments += result.data.interaction_counts.comments;
+            record.data.interaction_counts.shares += result.data.interaction_counts.shares;
+            if (record.data.interaction_counts.likes&gt;1000) {
+              console.log(&quot;!!!!!!!!&quot;);
+              console.log( util.format(record.data));
+            }            
+            break;
+          }
+        }
+      }
+
+      // console.log(&quot;...&quot;)
+      // console.log(records);
+
+      // console.log(records);
+      // throw new Error(&quot;Hello&quot;);
+
+      datastore.upsert(
+        records,
+        function(err, apiResponse) {
+          console.log(&quot;All records updated&quot;, err);
+          cb();
+        }
+      )
+    }
+  );
+
+}
+
+
+
+/**
+{ message: &#x27;sorry for the last time :)&#x27;,
+  created_time: &#x27;2016-06-27T12:10:29+0000&#x27;,
+  from: { name: &#x27;Петя Радева&#x27;, id: &#x27;10206083421555746&#x27; },
+  id: &#x27;93961945054_10157132867735055&#x27;,
+  shares: { count: 9 },
+  likes:
+   { data: [],
+     summary: { total_count: 0, can_like: true, has_liked: false } },
+  comments:
+   { data: [],
+     summary: { order: &#x27;chronological&#x27;, total_count: 0, can_comment: true } } }
+*/
+function unify_entry(entry) {
+  entry.interaction_counts = {
+    likes : (entry.likes &amp;&amp; entry.likes.summary &amp;&amp; entry.likes.summary.total_count) ? entry.likes.summary.total_count : 0,
+    comments : (entry.comments &amp;&amp; entry.comments.summary &amp;&amp; entry.comments.summary.total_count) ? entry.comments.summary.total_count : 0,
+    shares : (entry.shares &amp;&amp; entry.shares.count) ? entry.shares.count : 0
+  }
+}
+
+function print_entry(entry) {
+  if (!entry) {
+    console.log(&quot;Empty result !!&quot;);
+    return;
+  }
+
+  // console.log(entry);
+  console.log( util.format(
+          &quot;%s, %s(%s-%s): L:%d C:%d S:%d&quot;,
+          entry.created_time,
+          (entry.from &amp;&amp; entry.from.name) ? entry.from.name : &quot;Unknown&quot;,
+          (entry.from &amp;&amp; entry.from.id) ? entry.from.id : &quot;N/A&quot;,
+          entry.id,
+          entry.interaction_counts.likes,
+          entry.interaction_counts.comments,
+          entry.interaction_counts.shares
+  ));
+}
+
+
+function process_entry(entry) {
+  unify_entry(entry);
+  print_entry(entry);
+  stats.posts++;
+  stats.inc_interactions(entry.interaction_counts);  
+}
+
+
+    </pre>
+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../assets/vendor/prettify/prettify-min.js"></script>
+<script>prettyPrint();</script>
+<script src="../assets/js/yui-prettify.js"></script>
+<script src="../assets/../api.js"></script>
+<script src="../assets/js/api-filter.js"></script>
+<script src="../assets/js/api-list.js"></script>
+<script src="../assets/js/api-search.js"></script>
+<script src="../assets/js/apidocs.js"></script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+{
+    "project": {
+        "name": "fb-scrap",
+        "description": "Algorithm to scrap a FB page",
+        "version": "1.0.0",
+        "url": ""
+    },
+    "files": {
+        "app\\facebook_api\\facebook_api.js": {
+            "name": "app\\facebook_api\\facebook_api.js",
+            "modules": {
+                "Facebook API": 1
+            },
+            "classes": {
+                "FacebookApiFactory": 1,
+                "FacebookApi": 1
+            },
+            "fors": {},
+            "namespaces": {}
+        },
+        "app\\index_1.js": {
+            "name": "app\\index_1.js",
+            "modules": {},
+            "classes": {},
+            "fors": {},
+            "namespaces": {}
+        },
+        "app\\page_scraper.js": {
+            "name": "app\\page_scraper.js",
+            "modules": {},
+            "classes": {},
+            "fors": {},
+            "namespaces": {}
+        },
+        "app\\page_scraper_2.js": {
+            "name": "app\\page_scraper_2.js",
+            "modules": {},
+            "classes": {},
+            "fors": {},
+            "namespaces": {}
+        }
+    },
+    "modules": {
+        "Facebook API": {
+            "name": "Facebook API",
+            "submodules": {},
+            "elements": {},
+            "classes": {
+                "FacebookApiFactory": 1,
+                "FacebookApi": 1
+            },
+            "fors": {},
+            "namespaces": {},
+            "tag": "module",
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 38,
+            "description": "Module to work with the Facebook Graph API."
+        }
+    },
+    "classes": {
+        "FacebookApiFactory": {
+            "name": "FacebookApiFactory",
+            "shortname": "FacebookApiFactory",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "module": "Facebook API",
+            "namespace": "",
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 12,
+            "description": "Factory for the FacebookApi class.\n\nPuts in default values for options.api_root and \noptions.api_version.",
+            "is_constructor": 1,
+            "params": [
+                {
+                    "name": "options",
+                    "description": "The options for the newly\n instantiated {{#crossLink \"FacebookApi\"}}{{/crossLink}} object.",
+                    "type": "Object"
+                }
+            ]
+        },
+        "FacebookApi": {
+            "name": "FacebookApi",
+            "shortname": "FacebookApi",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "module": "Facebook API",
+            "namespace": "",
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 38,
+            "description": "Class that handles the communiction with the FB Graph API.",
+            "is_constructor": 1,
+            "params": [
+                {
+                    "name": "options",
+                    "description": "The options..",
+                    "type": "Object"
+                }
+            ]
+        }
+    },
+    "elements": {},
+    "classitems": [
+        {
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 47,
+            "description": "Options for the ..",
+            "itemtype": "property",
+            "name": "_options",
+            "type": "Object",
+            "class": "FacebookApi",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 55,
+            "description": "Object to make HTTP requsts.",
+            "itemtype": "property",
+            "name": "_request_client",
+            "type": "Object",
+            "class": "FacebookApi",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 64,
+            "description": "Changes the access token",
+            "itemtype": "method",
+            "name": "setAccessToken",
+            "params": [
+                {
+                    "name": "access_token",
+                    "description": "The new access token to set",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "Returns `this` so that methods could be chained."
+            },
+            "class": "FacebookApi",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 76,
+            "description": "Changes the api version string. Default is v2.7.",
+            "itemtype": "method",
+            "name": "setVersion",
+            "params": [
+                {
+                    "name": "api_version",
+                    "description": "The new version to set.",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "Returns `this` so that methods could be chained."
+            },
+            "class": "FacebookApi",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\facebook_api\\facebook_api.js",
+            "line": 88,
+            "description": "Invokes the Graph API methods.",
+            "itemtype": "method",
+            "name": "api",
+            "params": [
+                {
+                    "name": "url",
+                    "description": "The Graph API endpoint. I.e. \"me/posts\" or \"12345_2342341\"",
+                    "type": "String"
+                },
+                {
+                    "name": "params",
+                    "description": "Aditional GET parameters for the Graph API calls.",
+                    "type": "Object"
+                },
+                {
+                    "name": "cb",
+                    "description": "The callback when the method has completed",
+                    "type": "Function"
+                }
+            ],
+            "return": {
+                "description": "Returns `this` so that methods could be chained."
+            },
+            "class": "FacebookApi",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\index_1.js",
+            "line": 166,
+            "description": "{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } }",
+            "class": "",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\page_scraper.js",
+            "line": 124,
+            "description": "{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } }",
+            "class": "",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\page_scraper_2.js",
+            "line": 12,
+            "description": "Global static object to track stats about scraping",
+            "class": "",
+            "module": "Facebook API"
+        },
+        {
+            "file": "app\\page_scraper_2.js",
+            "line": 239,
+            "description": "a post object from FB looks like:\n{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } \n}\n\nALl items should have the following fields:\n    {\n      id : \"...\",\n      parent_id : \"...\", // only for comments and likes\n      item_type : \"..\", // post, comment or like\n      create_time : \"..\",  \n      from : {\n        id : \"...\",\n        name : \"...\"\n      },\n      interaction_counts : {\n        \"likes\" : ...,\n        \"comments\" : ...,\n        \"shares\" : ...\n      }\n    }",
+            "class": "",
+            "module": "Facebook API"
+        }
+    ],
+    "warnings": [
+        {
+            "message": "Missing item type\n{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } }",
+            "line": " app\\index_1.js:166"
+        },
+        {
+            "message": "Missing item type\n{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } }",
+            "line": " app\\page_scraper.js:124"
+        },
+        {
+            "message": "Missing item type\nGlobal static object to track stats about scraping",
+            "line": " app\\page_scraper_2.js:12"
+        },
+        {
+            "message": "Missing item type\na post object from FB looks like:\n{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } \n}\n\nALl items should have the following fields:\n    {\n      id : \"...\",\n      parent_id : \"...\", // only for comments and likes\n      item_type : \"..\", // post, comment or like\n      create_time : \"..\",  \n      from : {\n        id : \"...\",\n        name : \"...\"\n      },\n      interaction_counts : {\n        \"likes\" : ...,\n        \"comments\" : ...,\n        \"shares\" : ...\n      }\n    }",
+            "line": " app\\page_scraper_2.js:239"
+        }
+    ]
+}
