@@ -1,13 +1,14 @@
 var fs = require("fs");
 var util = require("util");
-var LOG  = require("./log.js");
+var path = require("path");
+var LOG  = require("./log/log.js");
 var PageScraperFactory = require('./page_scraper_2.js');
-var DatastoreFactory = require('./datastore.js');
+var DatastoreFactory = require('./datastore/datastore.js');
 
 var page_scraper = new PageScraperFactory({
-  access_token : fs.readFileSync("./ACCESS_TOKEN",{encoding:"utf8"}),
+  access_token : fs.readFileSync(path.resolve(__dirname, "../ACCESS_TOKEN"),{encoding:"utf8"}),
   concurency: {
-    api_calls : 100
+    api_calls : 50
  	}
 });
 
@@ -17,7 +18,7 @@ var datastore = new DatastoreFactory({
 
 var most = new MostInfluential();
 page_scraper.on("item",function(item){
-  //console.log("item", item);
+  process.stdout.write(".");
   LOG(LOG.MAIN, item.parent_id, item.id, item.created_time, item.item_type, item.interaction_counts);
   most.score(item);
 

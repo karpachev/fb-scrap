@@ -40,11 +40,14 @@
                             <ul id="api-classes" class="apis classes">
                                 <li><a href="../classes/FacebookApi.html">FacebookApi</a></li>
                                 <li><a href="../classes/FacebookApiFactory.html">FacebookApiFactory</a></li>
+                                <li><a href="../classes/PageScraper.html">PageScraper</a></li>
+                                <li><a href="../classes/PageScraperFactory.html">PageScraperFactory</a></li>
                             </ul>
                 
                 
                             <ul id="api-modules" class="apis modules">
                                 <li><a href="../modules/Facebook API.html">Facebook API</a></li>
+                                <li><a href="../modules/Page Scraper.html">Page Scraper</a></li>
                             </ul>
                         </div>
                     </div>
@@ -91,7 +94,7 @@ var request 		= require(&quot;request-json&quot;);
 var extend  		= require(&quot;extend&quot;);
 const querystring 	= require(&#x27;querystring&#x27;);
 const URL 			= require(&#x27;url&#x27;);
-var LOG          	= require(&quot;./log.js&quot;)
+var LOG          	= require(&quot;../log/log.js&quot;)
 
 /**
   * Factory for the FacebookApi class.
@@ -186,7 +189,7 @@ FacebookApi.prototype.api = function(url,params,cb) {
 	this._request_client.get(API_URL, function(err, result, body) {
 		// LOG(LOG.FB_API, result.statusCode, body);
 		if (err || result.statusCode!=200) {
-			LOG({module:LOG.FB_API, level:LOG.ERROR}, err, JSON.stringify(result));
+			LOG({module:LOG.FB_API, level:LOG.ERROR}, &quot;Graph API call failed&quot;, err, url, params, JSON.stringify(result), body);
 			cb(err,{result: result, body: body});
 		} else {
 			if (body.paging) {

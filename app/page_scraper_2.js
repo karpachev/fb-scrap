@@ -1,17 +1,26 @@
 "use strict";
+/**
+ * Module to scrape a page and index it in the DB. The module exports
+ * a factory function which accepts optional `options` 
+ * argument:
+ * - `access_token` - the access token to use to scrape the FB page 
+ * - `page_id` - the id of a Facebook page. Default: `me`. 
+ * - `api_version` - the FB api version to use. Default: `v2.7`
+ * - `concurrency.api_calls` - number of concurrent requests to Facebook. Default: `20`
+ *
+ * @module Page Scraper
+ */
 var fs 			     = require("fs");
-var FB_factory 	 = require('./facebook_api.js');
+var FB_factory 	 = require('./facebook_api/facebook_api.js');
 var util 		     = require("util");
 var extend  	   = require("extend");
 var EventEmitter = require('events');
 var async        = require('async');
-var LOG          = require("./log.js")
+var LOG          = require("./log/log.js")
 
 
 
-/**
-  * Global static object to track stats about scraping
-  */ 
+/// Statistics for the various number of calls made.
 var stats = {
   posts : 0,
   likes : 0,
@@ -30,8 +39,22 @@ var stats = {
 };
 
 
-
-
+/**
+  * Factory for the PageScraper class.
+  *
+  * Puts in default values for options
+  * - `page_id` - `me`. 
+  * - `api_version` -  `v2.7`
+  * - `concurrency.api_calls` - `20`
+  * 
+  * @class PageScraperFactory
+  * @constructor
+  * @param options {Object} The options for the newly
+  * instantiated {{#crossLink "PageScraper"}}{{/crossLink}} object. Required
+  * `options.access_token`
+  * @throws {TypeError} when the `options.access_token` is not set.
+  * @return {PageScraper} instance of class.
+  */
 function PageScraperFactory(options) {
 	var merged_options = {};
 	extend(
@@ -41,18 +64,32 @@ function PageScraperFactory(options) {
 			 access_token: "",
 			 page_id: "me",
 			 api_version: "v2.7",
-       concurency: {
+       concurrency: {
           api_calls : 20
        }
 		},
 		options
 	);
 
+  if (!options.access_token) {
+    throw new TypeError("access_token must be specified");
+  }
+
 	LOG(LOG.PAGE_SCRAPER, merged_options);
 	return new PageScraper(merged_options);
 }
 
-/// Constructor of the main scraper class
+/**
+  * Constructor of the main scraper class. The scraped items are emitted
+  * as events (using the methods of the EventEmitter).
+  * 
+  * @class PageScraper
+  * @constructor
+  * @extends EventEmitter
+  * @param options {Object} Configuration options for the scraper. Expects
+  * that the {{#crossLink "PageScraperFactory"}}{{/crossLink}} has set 
+  * appropriate defult values, for the ones that the user did not provide.
+  */ 
 function PageScraper (options) {
   EventEmitter.call(this);
 	LOG(LOG.PAGE_SCRAPER, "Now in the Event Emitter");
@@ -79,7 +116,7 @@ function PageScraper (options) {
         cb
       );
     },
-    self._options.concurency.api_calls
+    self._options.concurrency.api_calls
   );
 
   // Start the gathering in the page root
@@ -129,8 +166,14 @@ PageScraper.prototype.parseStream = function(base_graph, params, cb) {
     function(err, result) {
       //TODO - Apropriate error handling
       if (err) {
+        if (self.checkIfErrorTerminal(err,result)) {
+          // the error cannot get recovered.. send email/sms/etc..
+          LOG({module:LOG.PAGE_SCRAPER, level:LOG.ERROR}, "Cannot retry this method.. giving up.");
+          return false;
+        }
+
         if (!params.system) {
-          Object.defineProperty(like_params, "system", 
+          Object.defineProperty(params, "system", 
             {
               enumerable: false,
               configurable: true,
@@ -145,7 +188,7 @@ PageScraper.prototype.parseStream = function(base_graph, params, cb) {
         if (params.system.api_retries++<3) {
           // one more retry
           LOG({module:LOG.PAGE_SCRAPER, level:LOG.ERROR}, "Retrying the request one more time");
-          this.scheduleStream(base_graph, next_params);
+          self.scheduleStream(base_graph, next_params);
         }
         cb(err);
         return;
@@ -156,6 +199,16 @@ PageScraper.prototype.parseStream = function(base_graph, params, cb) {
       cb(err);
     }
   );
+}
+
+/**
+  * Check if the error code is non recoverable.
+  * 
+  * @method checkIfErrorTerminal
+  * @param err {object} the error 
+  */
+PageScraper.prototype.checkIfErrorTerminal = function(err,result) {
+
 }
 
 /// Reformat the stream of posts, comments or likes and emit them (so

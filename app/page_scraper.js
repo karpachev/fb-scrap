@@ -1,6 +1,6 @@
 "use strict";
 var fs 			= require("fs");
-var FB_factory 	= require('./facebook_api.js'),
+var FB_factory 	= require('./facebook_api/facebook_api.js'),
     FB 			= FB_factory();
 var util 		= require("util");
 var extend  	= require("extend");

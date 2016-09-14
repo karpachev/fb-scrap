@@ -3,7 +3,7 @@ var util 		     = require("util");
 var EventEmitter = require('events');
 var async        = require('async');
 var extend       = require('extend');
-var LOG          = require("./log.js")
+var LOG          = require("../log/log.js")
 var gcloud       = require('google-cloud');
 
 

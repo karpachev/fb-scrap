@@ -40,11 +40,14 @@
                             <ul id="api-classes" class="apis classes">
                                 <li><a href="../classes/FacebookApi.html">FacebookApi</a></li>
                                 <li><a href="../classes/FacebookApiFactory.html">FacebookApiFactory</a></li>
+                                <li><a href="../classes/PageScraper.html">PageScraper</a></li>
+                                <li><a href="../classes/PageScraperFactory.html">PageScraperFactory</a></li>
                             </ul>
                 
                 
                             <ul id="api-modules" class="apis modules">
                                 <li><a href="../modules/Facebook API.html">Facebook API</a></li>
+                                <li><a href="../modules/Page Scraper.html">Page Scraper</a></li>
                             </ul>
                         </div>
                     </div>
@@ -83,19 +86,28 @@
 <div class="file">
     <pre class="code prettyprint linenums">
 &quot;use strict&quot;;
+/**
+ * Module to scrape a page and index it in the DB. The module exports
+ * a factory function which accepts optional &#x60;options&#x60; 
+ * argument:
+ * - &#x60;access_token&#x60; - the access token to use to scrape the FB page 
+ * - &#x60;page_id&#x60; - the id of a Facebook page. Default: &#x60;me&#x60;. 
+ * - &#x60;api_version&#x60; - the FB api version to use. Default: &#x60;v2.7&#x60;
+ * - &#x60;concurrency.api_calls&#x60; - number of concurrent requests to Facebook. Default: &#x60;20&#x60;
+ *
+ * @module Page Scraper
+ */
 var fs 			     = require(&quot;fs&quot;);
-var FB_factory 	 = require(&#x27;./facebook_api.js&#x27;);
+var FB_factory 	 = require(&#x27;./facebook_api/facebook_api.js&#x27;);
 var util 		     = require(&quot;util&quot;);
 var extend  	   = require(&quot;extend&quot;);
 var EventEmitter = require(&#x27;events&#x27;);
 var async        = require(&#x27;async&#x27;);
-var LOG          = require(&quot;./log.js&quot;)
+var LOG          = require(&quot;./log/log.js&quot;)
 
 
 
-/**
-  * Global static object to track stats about scraping
-  */ 
+/// Statistics for the various number of calls made.
 var stats = {
   posts : 0,
   likes : 0,
@@ -114,8 +126,22 @@ var stats = {
 };
 
 
-
-
+/**
+  * Factory for the PageScraper class.
+  *
+  * Puts in default values for options
+  * - &#x60;page_id&#x60; - &#x60;me&#x60;. 
+  * - &#x60;api_version&#x60; -  &#x60;v2.7&#x60;
+  * - &#x60;concurrency.api_calls&#x60; - &#x60;20&#x60;
+  * 
+  * @class PageScraperFactory
+  * @constructor
+  * @param options {Object} The options for the newly
+  * instantiated {{#crossLink &quot;PageScraper&quot;}}{{/crossLink}} object. Required
+  * &#x60;options.access_token&#x60;
+  * @throws {TypeError} when the &#x60;options.access_token&#x60; is not set.
+  * @return {PageScraper} instance of {{#crossLink &quot;PageScraper&quot;}}{{/crossLink}} class.
+  */
 function PageScraperFactory(options) {
 	var merged_options = {};
 	extend(
@@ -125,18 +151,30 @@ function PageScraperFactory(options) {
 			 access_token: &quot;&quot;,
 			 page_id: &quot;me&quot;,
 			 api_version: &quot;v2.7&quot;,
-       concurency: {
+       concurrency: {
           api_calls : 20
        }
 		},
 		options
 	);
 
+  if (!options.access_token) {
+    throw new TypeError(&quot;access_token must be specified&quot;);
+  }
+
 	LOG(LOG.PAGE_SCRAPER, merged_options);
 	return new PageScraper(merged_options);
 }
 
-/// Constructor of the main scraper class
+/**
+  * Constructor of the main scraper class
+  * 
+  * @class PageScraper
+  * @constructor
+  * @param options {Object} Configuration options for the scraper:
+  * - this
+  * - that
+  */ 
 function PageScraper (options) {
   EventEmitter.call(this);
 	LOG(LOG.PAGE_SCRAPER, &quot;Now in the Event Emitter&quot;);
@@ -163,7 +201,7 @@ function PageScraper (options) {
         cb
       );
     },
-    self._options.concurency.api_calls
+    self._options.concurrency.api_calls
   );
 
   // Start the gathering in the page root
@@ -213,8 +251,14 @@ PageScraper.prototype.parseStream = function(base_graph, params, cb) {
     function(err, result) {
       //TODO - Apropriate error handling
       if (err) {
+        if (self.checkIfErrorTerminal(err,result)) {
+          // the error cannot get recovered.. send email/sms/etc..
+          LOG({module:LOG.PAGE_SCRAPER, level:LOG.ERROR}, &quot;Cannot retry this method.. giving up.&quot;);
+          return false;
+        }
+
         if (!params.system) {
-          Object.defineProperty(like_params, &quot;system&quot;, 
+          Object.defineProperty(params, &quot;system&quot;, 
             {
               enumerable: false,
               configurable: true,
@@ -229,7 +273,7 @@ PageScraper.prototype.parseStream = function(base_graph, params, cb) {
         if (params.system.api_retries++&lt;3) {
           // one more retry
           LOG({module:LOG.PAGE_SCRAPER, level:LOG.ERROR}, &quot;Retrying the request one more time&quot;);
-          this.scheduleStream(base_graph, next_params);
+          self.scheduleStream(base_graph, next_params);
         }
         cb(err);
         return;
@@ -240,6 +284,10 @@ PageScraper.prototype.parseStream = function(base_graph, params, cb) {
       cb(err);
     }
   );
+}
+
+PageScraper.prototype.checkIfErrorTerminal = function(err,result) {
+
 }
 
 /// Reformat the stream of posts, comments or likes and emit them (so

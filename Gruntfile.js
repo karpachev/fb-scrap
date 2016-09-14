@@ -17,4 +17,7 @@ module.exports = function(grunt) {
   });
 
   grunt.loadNpmTasks('grunt-contrib-yuidoc');
+
+
+  grunt.registerTask('default', ["yuidoc:compile"]);
 };

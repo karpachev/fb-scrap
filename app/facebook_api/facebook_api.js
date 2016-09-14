@@ -7,7 +7,7 @@ var request 		= require("request-json");
 var extend  		= require("extend");
 const querystring 	= require('querystring');
 const URL 			= require('url');
-var LOG          	= require("./log.js")
+var LOG          	= require("../log/log.js")
 
 /**
   * Factory for the FacebookApi class.
@@ -102,7 +102,7 @@ FacebookApi.prototype.api = function(url,params,cb) {
 	this._request_client.get(API_URL, function(err, result, body) {
 		// LOG(LOG.FB_API, result.statusCode, body);
 		if (err || result.statusCode!=200) {
-			LOG({module:LOG.FB_API, level:LOG.ERROR}, err, JSON.stringify(result));
+			LOG({module:LOG.FB_API, level:LOG.ERROR}, "Graph API call failed", err, url, params, JSON.stringify(result), body);
 			cb(err,{result: result, body: body});
 		} else {
 			if (body.paging) {

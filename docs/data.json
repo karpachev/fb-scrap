@@ -34,8 +34,13 @@
         },
         "app\\page_scraper_2.js": {
             "name": "app\\page_scraper_2.js",
-            "modules": {},
-            "classes": {},
+            "modules": {
+                "Page Scraper": 1
+            },
+            "classes": {
+                "PageScraperFactory": 1,
+                "PageScraper": 1
+            },
             "fors": {},
             "namespaces": {}
         }
@@ -55,6 +60,21 @@
             "file": "app\\facebook_api\\facebook_api.js",
             "line": 38,
             "description": "Module to work with the Facebook Graph API."
+        },
+        "Page Scraper": {
+            "name": "Page Scraper",
+            "submodules": {},
+            "elements": {},
+            "classes": {
+                "PageScraperFactory": 1,
+                "PageScraper": 1
+            },
+            "fors": {},
+            "namespaces": {},
+            "tag": "module",
+            "file": "app\\page_scraper_2.js",
+            "line": 82,
+            "description": "Module to scrape a page and index it in the DB. The module exports\na factory function which accepts optional `options` \nargument:\n- `access_token` - the access token to use to scrape the FB page \n- `page_id` - the id of a Facebook page. Default: `me`. \n- `api_version` - the FB api version to use. Default: `v2.7`\n- `concurrency.api_calls` - number of concurrent requests to Facebook. Default: `20`"
         }
     },
     "classes": {
@@ -98,6 +118,58 @@
                 {
                     "name": "options",
                     "description": "The options..",
+                    "type": "Object"
+                }
+            ]
+        },
+        "PageScraperFactory": {
+            "name": "PageScraperFactory",
+            "shortname": "PageScraperFactory",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "module": "Page Scraper",
+            "namespace": "",
+            "file": "app\\page_scraper_2.js",
+            "line": 42,
+            "description": "Factory for the PageScraper class.\n\nPuts in default values for options\n- `page_id` - `me`. \n- `api_version` -  `v2.7`\n- `concurrency.api_calls` - `20`",
+            "is_constructor": 1,
+            "params": [
+                {
+                    "name": "options",
+                    "description": "The options for the newly\ninstantiated {{#crossLink \"PageScraper\"}}{{/crossLink}} object. Required\n`options.access_token`",
+                    "type": "Object"
+                }
+            ],
+            "throws": {
+                "description": "when the `options.access_token` is not set.",
+                "type": "TypeError"
+            },
+            "return": {
+                "description": "instance of {{#crossLink \"PageScraper\"}}{{/crossLink}} class.",
+                "type": "PageScraper"
+            }
+        },
+        "PageScraper": {
+            "name": "PageScraper",
+            "shortname": "PageScraper",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "module": "Page Scraper",
+            "namespace": "",
+            "file": "app\\page_scraper_2.js",
+            "line": 82,
+            "description": "Constructor of the main scraper class",
+            "is_constructor": 1,
+            "params": [
+                {
+                    "name": "options",
+                    "description": "Configuration options for the scraper:\n- this\n- that",
                     "type": "Object"
                 }
             ]
@@ -196,29 +268,22 @@
             "file": "app\\index_1.js",
             "line": 166,
             "description": "{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } }",
-            "class": "",
+            "class": "PageScraperFactory",
             "module": "Facebook API"
         },
         {
             "file": "app\\page_scraper.js",
             "line": 124,
             "description": "{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } }",
-            "class": "",
+            "class": "PageScraperFactory",
             "module": "Facebook API"
         },
         {
             "file": "app\\page_scraper_2.js",
-            "line": 12,
-            "description": "Global static object to track stats about scraping",
-            "class": "",
-            "module": "Facebook API"
-        },
-        {
-            "file": "app\\page_scraper_2.js",
-            "line": 239,
+            "line": 284,
             "description": "a post object from FB looks like:\n{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } \n}\n\nALl items should have the following fields:\n    {\n      id : \"...\",\n      parent_id : \"...\", // only for comments and likes\n      item_type : \"..\", // post, comment or like\n      create_time : \"..\",  \n      from : {\n        id : \"...\",\n        name : \"...\"\n      },\n      interaction_counts : {\n        \"likes\" : ...,\n        \"comments\" : ...,\n        \"shares\" : ...\n      }\n    }",
-            "class": "",
-            "module": "Facebook API"
+            "class": "PageScraper",
+            "module": "Page Scraper"
         }
     ],
     "warnings": [
@@ -231,12 +296,8 @@
             "line": " app\\page_scraper.js:124"
         },
         {
-            "message": "Missing item type\nGlobal static object to track stats about scraping",
-            "line": " app\\page_scraper_2.js:12"
-        },
-        {
             "message": "Missing item type\na post object from FB looks like:\n{ message: 'sorry for the last time :)',\n  created_time: '2016-06-27T12:10:29+0000',\n  from: { name: 'Петя Радева', id: '10206083421555746' },\n  id: '93961945054_10157132867735055',\n  shares: { count: 9 },\n  likes:\n   { data: [],\n     summary: { total_count: 0, can_like: true, has_liked: false } },\n  comments:\n   { data: [],\n     summary: { order: 'chronological', total_count: 0, can_comment: true } } \n}\n\nALl items should have the following fields:\n    {\n      id : \"...\",\n      parent_id : \"...\", // only for comments and likes\n      item_type : \"..\", // post, comment or like\n      create_time : \"..\",  \n      from : {\n        id : \"...\",\n        name : \"...\"\n      },\n      interaction_counts : {\n        \"likes\" : ...,\n        \"comments\" : ...,\n        \"shares\" : ...\n      }\n    }",
-            "line": " app\\page_scraper_2.js:239"
+            "line": " app\\page_scraper_2.js:284"
         }
     ]
 }
